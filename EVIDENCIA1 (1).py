@@ -2,9 +2,13 @@ import csv
 import numpy as np
 from collections import namedtuple
 import os
-Llanta = namedtuple(
-    "Llanta", "Folio, Fecha_venta, Descripcion, Cantidad, Precio")
+import sys
+import sqlite3
+from sqlite3 import Error
+
+Llanta = namedtuple("Llanta", "Folio, Fecha_venta, Descripcion, Cantidad, Precio, IVA, Pago_final")
 lista_llantas = []
+
 
 while True:
     print(" ")
@@ -20,35 +24,45 @@ while True:
     respuesta = (int(input("Cual opcion escogeras?: ")))
     print("-------------------------")
     if respuesta == 1:
-        folio = (int(input("Introduce el numero de folio: ")))
+        Folio = (int(input("Introduce el numero de folio: ")))
         fecha_venta = (str(input("Introduce la fecha de la venta: ")))
-        descripcion = (
-            str(input("Da una breve descripcion de la llanta vendida: ")))
+        descripcion = (str(input("Da una breve descripcion de la llanta vendida: ")))
         cantidad = (int(input("Cuantas llantas se vendieron: ")))
         precio = (float(input("Cual fue el precio por llanta: ")))
         total_pago = cantidad * precio
         print(f"El total a pagar es {total_pago}")
-        IVA = total_pago/1.16
-        pago_final = total_pago + IVA
-        print(f"El monto final con IVA incluido es de {pago_final}")
-        venta_en_turno = Llanta(
-            folio, fecha_venta, descripcion, cantidad, precio)
+        iva = total_pago/1.16
+        pago_final = total_pago + iva
+        print(f"El monto final con iva incluido es de {pago_final}")
+        venta_en_turno = Llanta(Folio, fecha_venta, descripcion, cantidad, precio, iva, pago_final)
         lista_llantas.append(venta_en_turno)
-        with open("EVIDENCIA1.csv", "w", newline="") as Llanta_files:
-            grabador = csv.writer(Llanta_files)
-            grabador.writerow(("Llanta", "Folio", "Fecha_venta",
-                              "Descripcion", "Cantidad", "Precio"))
-            grabador.writerows([(Llanta, elemento.Folio, elemento.Fecha_venta, elemento.Descripcion,
-                               elemento.Cantidad, elemento.Precio) for elemento in lista_llantas])
+        
+        try:
+            with sqlite3.connect("Venta_llantas.db") as conn:
+                cur = conn.cursor()
+                cur.execute("CREATE TABLE IF NOT EXISTS Llantas (Folio INTEGER PRIMARY KEY, fecha_venta TEXT NOT NULL, descripcion TEXT NOT NULL, cantidad INTEGER NOT NULL, precio REAL NOT NULL, iva REAL NOT NULL, pago_final REAL NOT NULL);")
+                valores = {"Folio": Folio, "fecha_venta": fecha_venta, "descripcion": descripcion, "cantidad": cantidad, "precio": precio, "iva": iva, "pago_final": pago_final} 
+                cur.execute("INSERT INTO Llantas VALUES(:Folio, :fecha_venta, :descripcion, :cantidad, :precio, :iva, :pago_final)", valores)
+                registros = cur.fetchall()
+                print("Tabla creada")
+               
+        except Error as e:
+            print(e)
+        except:
+            print(f"Se produjo el siguiente error: {sys.exc_info()[0]}")
+        finally:
+            if conn:
+                conn.close()
     elif respuesta == 2:
-        folio_a_buscar = (
-            int(input("Introduce el numero de folio que quieres consultar: ")))
+        Folio_a_buscar = (int(input("Introduce el numero de folio que quieres consultar: ")))
         for elemento in lista_llantas:
-            if elemento.Folio == folio_a_buscar:
+            if elemento.Folio == Folio_a_buscar:
                 print(f"Fecha de venta: {elemento.Fecha_venta}")
                 print(f"Descripcion: {elemento.Descripcion}")
                 print(f"Cantidad: {elemento.Cantidad}")
                 print(f"Precio: {elemento.Precio}")
+                print(f"IVA: {elemento.IVA}")
+                print(f"Pago_final: {elemento.Pago_final}")
                 break
         else:
             print("No se tiene registro de ese folio")
@@ -59,6 +73,8 @@ while True:
             print(f"Descripcion: {elemento.Descripcion}")
             print(f"Cantidad: {elemento.Cantidad}")
             print(f"Precio: {elemento.Precio}")
+            print(f"IVA: {elemento.IVA}")
+            print(f"Pago_final: {elemento.Pago_final}")
             print("----------------------------------------")
     elif respuesta == 4:
         break
